@@ -18,6 +18,7 @@ public class StudentController {
 
     @PostMapping
     public ResponseEntity<StudentDTO> createStudent(@RequestBody StudentDTO studentDTO) {
+        System.out.println(studentDTO.getName());
         // Add business logic here to create a student
         studentService.addStudent(studentDTO);
         return new ResponseEntity<>(studentDTO, HttpStatus.OK);
