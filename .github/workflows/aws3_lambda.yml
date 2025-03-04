@@ -1,0 +1,138 @@
+name: SpringBoot_AWS S3,AWS API GateWay And AWS Lambda
+on:
+ push:
+   branches: ["main","dev"]
+ workflow_dispatch:
+
+jobs:
+ build:
+   runs-on: ubuntu-latest
+   steps:
+     - name: Checkout from Repo
+       uses: actions/checkout@v4.2.2
+     - name: Install Java 21
+       uses: actions/setup-java@v4.7.0
+       with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: 'maven'
+     - name: Build maven
+       run: mvn clean install -DskiptTests=true
+       working-directory: Spring_AWS3_Lambda
+       
+     - name: Upload zip file
+       uses: actions/upload-artifact@v4.6.1
+       with:
+        name: spring-aws-s3-lambda
+        path: Spring_AWS3_Lambda/target/*.jar
+ test:
+  needs: build
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout from Repository
+      uses: actions/checkout@v4.2.2
+    - name: Setup JDK 21
+      uses: actions/setup-java@v4.7.0
+      with:
+        java-version: 21
+        distribution: "temurin"
+        cache: maven
+        
+    - name: Build maven
+      run: mvn clean install -DskipTests=true
+      working-directory: Spring_AWS3_Lambda
+      
+    - name: Build and analyze
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=kyawyea92_Spring_GitHubAction_AWS3_Lambda
+      working-directory: Spring_AWS3_Lambda
+      
+    - name: Check SonarQube Quality Gate
+      id: sonar
+      run: |
+          sleep 10
+          STATUS=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: "https://sonarcloud.io/api/qualitygates/project_status?projectKey=kyawyea92_Spring_GitHubAction_AWS3_Lambda" | jq -r .projectStatus.status)
+          echo "SonarQube Quality Gate status: $STATUS"
+          if [[ "$STATUS" != "NONE" ]]; then
+            echo "Quality gate failed"
+            exit 1
+          fi
+ docker:
+    needs: test
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout for production
+        uses: actions/checkout@v4.2.2
+        
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4.7.0
+        with:
+          java-version: 21
+          distribution: "temurin"
+          cache: maven
+          
+      - name: Build With Maven
+        run: mvn clean install -DskipTests=true
+        working-directory: Spring_AWS3_Lambda
+        
+      - name: Package with Maven
+        run: mvn package -DskipTests=true
+        working-directory: Spring_AWS3_Lambda
+
+      - name: Build Docker images
+        run: docker build ./Spring_AWS3_Lambda/ -t kyawyealwin/springboot_awslambda:v1.0.0
+      
+      - name: Push to DockerHub
+        run: |
+          docker login -u kyawyealwin -p ${{secrets.DOCKER_PASSWORD}}
+          docker push kyawyealwin/springboot_awslambda:v1.0.0
+          
+ AWS_S3_Deploy:
+   needs: docker
+   runs-on: ubuntu-latest
+   steps:
+     - name: download zip file
+       uses: actions/download-artifact@v4.1.8
+       with:
+         name: spring-aws-s3-lambda
+         path: ./Spring_AWS3_Lambda/target
+         
+     - name: Upload to AWS S3
+       uses: jakejarvis/s3-sync-action@master
+       with:
+        args: --acl public-read --follow-symlinks --delete
+       env:
+        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'ap-southeast-1'   # optional: defaults to ap-southeast-1
+        SOURCE_DIR: 'Spring_AWS3_Lambda/target'    # optional: defaults to entire repository
+ release:
+    needs: [docker]
+    if: github.ref == 'refs/heads/dev'
+    environment:
+      name: docker
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4.1.8
+      with:
+        name: spring-aws-s3-lambda
+        path: ./Spring_AWS3_Lambda/target
+        
+    - name: List files in target directory
+      run: ls -al Spring_AWS3_Lambda/target
+      
+    - name: GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ secrets.PROD_VERSION }}
+        generate_release_notes: true
+        name: v${{secrets.PROD_VERSION}}
+        files: ./Spring_AWS3_Lambda/target/*.jar
+        token: ${{ secrets.PROD_SECRET }}
+
+ 
