@@ -79,4 +79,33 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: 'ap-southeast-1'   # optional: defaults to ap-southeast-1
         SOURCE_DIR: 'Spring_AWS3_Lambda/target'    # optional: defaults to entire repository
-       
+ docker:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout for production
+        uses: actions/checkout@v4.2.2
+        
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4.7.0
+        with:
+          java-version: 21
+          distribution: "temurin"
+          cache: maven
+          
+      - name: Build With Maven
+        run: mvn clean install -DskipTests=true
+        working-directory: Spring_AWS3_Lambda
+        
+      - name: Package with Maven
+        run: mvn package -DskipTests=true
+        working-directory: Spring_AWS3_Lambda
+
+      - name: Build Docker images
+        run: docker build ./Spring_AWS3_Lambda/ -t kyawyealwin/springboot_awslambda:v1.0.0
+      
+      - name: Push to DockerHub
+        run: |
+          docker login -u kyawyealwin -p ${{secrets.DOCKER_PASSWORD}}
+          docker push kyawyealwin/springboot_awslambda:v1.0.0
