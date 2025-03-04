@@ -58,30 +58,9 @@ jobs:
             echo "Quality gate failed"
             exit 1
           fi
-          
- deploy:
-   needs: test
-   runs-on: ubuntu-latest
-   steps:
-     - name: download zip file
-       uses: actions/download-artifact@v4.1.8
-       with:
-         name: spring-aws-s3-lambda
-         path: ./Spring_AWS3_Lambda/target
-         
-     - name: Upload to AWS S3
-       uses: jakejarvis/s3-sync-action@master
-       with:
-        args: --acl public-read --follow-symlinks --delete
-       env:
-        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: 'ap-southeast-1'   # optional: defaults to ap-southeast-1
-        SOURCE_DIR: 'Spring_AWS3_Lambda/target'    # optional: defaults to entire repository
  docker:
     needs: test
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout for production
@@ -109,3 +88,25 @@ jobs:
         run: |
           docker login -u kyawyealwin -p ${{secrets.DOCKER_PASSWORD}}
           docker push kyawyealwin/springboot_awslambda:v1.0.0
+          
+ deploy:
+   needs: docker
+   runs-on: ubuntu-latest
+   steps:
+     - name: download zip file
+       uses: actions/download-artifact@v4.1.8
+       with:
+         name: spring-aws-s3-lambda
+         path: ./Spring_AWS3_Lambda/target
+         
+     - name: Upload to AWS S3
+       uses: jakejarvis/s3-sync-action@master
+       with:
+        args: --acl public-read --follow-symlinks --delete
+       env:
+        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'ap-southeast-1'   # optional: defaults to ap-southeast-1
+        SOURCE_DIR: 'Spring_AWS3_Lambda/target'    # optional: defaults to entire repository
+ 
