@@ -18,10 +18,10 @@ jobs:
         cache: 'maven'
      - name: Build maven
        run: mvn clean install -DskiptTests=true
-       working-directory: Spring_GitHubAction_AWS3_Lambda
+       working-directory: Spring_AWS3_Lambda
        
      - name: Upload zip file
        uses: actions/upload-artifact@v4.6.1
        with:
         name: spring-aws-s3-lambda
-        path: Spring_GitHubAction_AWS3_Lambda/target/*.zip   
+        path: Spring_AWS3_Lambda/target/*.zip   
