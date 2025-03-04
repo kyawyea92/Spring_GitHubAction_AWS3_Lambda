@@ -54,13 +54,13 @@ jobs:
           sleep 10
           STATUS=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: "https://sonarcloud.io/api/qualitygates/project_status?projectKey=kyawyea92_Spring_GitHubAction_AWS3_Lambda" | jq -r .projectStatus.status)
           echo "SonarQube Quality Gate status: $STATUS"
-          if [[ "$STATUS" != "NONE" ]]; then
+          if [[ "$STATUS" != "OK" ]]; then
             echo "Quality gate failed"
             exit 1
           fi
  docker:
     needs: test
-    if: github.ref == 'refs/heads/dev'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout for production
@@ -111,7 +111,7 @@ jobs:
         SOURCE_DIR: 'Spring_AWS3_Lambda/target'    # optional: defaults to entire repository
  release:
     needs: [docker]
-    if: github.ref == 'refs/heads/dev'
+    if: github.ref == 'refs/heads/main'
     environment:
       name: docker
     runs-on: ubuntu-latest
