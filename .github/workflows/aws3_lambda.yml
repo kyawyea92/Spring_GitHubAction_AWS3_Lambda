@@ -110,8 +110,8 @@ jobs:
         AWS_REGION: 'ap-southeast-1'   # optional: defaults to ap-southeast-1
         SOURCE_DIR: 'Spring_AWS3_Lambda/target'    # optional: defaults to entire repository
  release:
-    needs: [build]
-    if: github.ref == 'refs/heads/main'
+    needs: [docker]
+    if: github.ref == 'refs/heads/dev'
     environment:
       name: docker
     runs-on: ubuntu-latest
@@ -131,7 +131,7 @@ jobs:
       with:
         tag_name: v${{ secrets.PROD_VERSION }}
         generate_release_notes: true
-        name: v${{vars.PROD_VERSION}}
+        name: v${{secrets.PROD_VERSION}}
         files: ./Spring_AWS3_Lambda/target/*.jar
         token: ${{ secrets.PROD_SECRET }}
 
