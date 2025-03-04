@@ -89,7 +89,7 @@ jobs:
           docker login -u kyawyealwin -p ${{secrets.DOCKER_PASSWORD}}
           docker push kyawyealwin/springboot_awslambda:v1.0.0
           
- deploy:
+ AWS_S3_Deploy:
    needs: docker
    runs-on: ubuntu-latest
    steps:
@@ -109,4 +109,30 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: 'ap-southeast-1'   # optional: defaults to ap-southeast-1
         SOURCE_DIR: 'Spring_AWS3_Lambda/target'    # optional: defaults to entire repository
+ release:
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: docker
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4.1.8
+      with:
+        name: spring_boot_cicd
+        path: ./Spring_AWS3_Lambda/target
+        
+    - name: List files in target directory
+      run: ls -al Spring_AWS3_Lambda/target
+      
+    - name: GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ secrets.PROD_VERSION }}
+        generate_release_notes: true
+        name: v${{vars.PROD_VERSION}}
+        files: ./Spring_AWS3_Lambda/target/*.jar
+        token: ${{ secrets.PROD_SECRET }}
+
  
