@@ -24,7 +24,7 @@ jobs:
        uses: actions/upload-artifact@v4.6.1
        with:
         name: spring-aws-s3-lambda
-        path: Spring_AWS3_Lambda/target/*.zip
+        path: Spring_AWS3_Lambda/target/*.jar
  test:
   needs: build
   runs-on: ubuntu-latest
