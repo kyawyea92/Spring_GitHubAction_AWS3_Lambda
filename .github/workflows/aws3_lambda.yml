@@ -25,8 +25,42 @@ jobs:
        with:
         name: spring-aws-s3-lambda
         path: Spring_AWS3_Lambda/target/*.zip
+ test:
+  needs: build
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout from Repository
+      uses: actions/checkout@v4.2.2
+    - name: Setup JDK 21
+      uses: actions/setup-java@v4.7.0
+      with:
+        java-version: 21
+        distribution: "temurin"
+        cache: maven
+        
+    - name: Build maven
+      run: mvn clean install -DskipTests=true
+      working-directory: Spring_AWS3_Lambda
+      
+    - name: Build and analyze
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=kyawyea92_Spring_GitHubAction_AWS3_Lambda
+      working-directory: Spring_AWS3_Lambda
+      
+    - name: Check SonarQube Quality Gate
+      id: sonar
+      run: |
+          sleep 10
+          STATUS=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: "https://sonarcloud.io/api/qualitygates/project_status?projectKey=kyawyea92_Spring_GitHubAction_AWS3_Lambda" | jq -r .projectStatus.status)
+          echo "SonarQube Quality Gate status: $STATUS"
+          if [[ "$STATUS" != "OK" ]]; then
+            echo "Quality gate failed"
+            exit 1
+          fi
+          
  deploy:
-   needs: build
+   needs: test
    runs-on: ubuntu-latest
    steps:
      - name: download zip file
