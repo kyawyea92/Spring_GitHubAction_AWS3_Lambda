@@ -25,7 +25,15 @@ jobs:
        with:
         name: spring-aws-s3-lambda
         path: Spring_AWS3_Lambda/target/*.zip
-        
+ deploy:
+   runs-on: ubuntu-latest
+   steps:
+     - name: download zip file
+       uses: atcions/download-artifact@4.1.9
+       with:
+         name: spring-aws-s3-lambda
+         path: ./Spring_AWS3_Lambda/target
+         
      - name: Upload to AWS S3
        uses: jakejarvis/s3-sync-action@master
        with:
@@ -36,3 +44,4 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: 'ap-southeast-1'   # optional: defaults to ap-southeast-1
         SOURCE_DIR: 'Spring_AWS3_Lambda/target'    # optional: defaults to entire repository
+       
